@@ -5,6 +5,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MindCanvas - AI Text & Sketch Generator</title>
+    <script>
+        const CONFIG = {
+    BACKEND_URL: 'https://twss-ai.onrender.com/', // Update this!
+    FALLBACK_URLS: [
+        'https://your-backup-backend.railway.app',
+        'https://your-heroku-app.herokuapp.com'
+    ],
+    isDevelopment: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+};
+
+    </script>
     <style>
         * {
             margin: 0;
