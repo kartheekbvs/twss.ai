@@ -1,1 +1,589 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MindCanvas - AI Text & Sketch Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #4a5568;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            color: #718096;
+            font-size: 1.1em;
+        }
+
+        .input-section {
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            font-weight: 600;
+            color: #4a5568;
+            min-width: 80px;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .input-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .generate-btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: block;
+            margin: 0 auto;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .generate-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .generate-btn:active {
+            transform: translateY(0);
+        }
+
+        .generate-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        .results {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 30px;
+        }
+
+        .sketch-section, .text-section {
+            background: #f8fafc;
+            padding: 25px;
+            border-radius: 15px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .section-title {
+            font-size: 1.4em;
+            color: #4a5568;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #sketchCanvas {
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            display: block;
+            margin: 0 auto;
+            background: white;
+        }
+
+        .generated-text {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            font-family: 'Georgia', serif;
+            line-height: 1.6;
+            color: #4a5568;
+            min-height: 200px;
+            white-space: pre-wrap;
+        }
+
+        .loading {
+            text-align: center;
+            color: #718096;
+            font-style: italic;
+        }
+
+        .status {
+            text-align: center;
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        .status.generating {
+            background: #ebf8ff;
+            color: #2b6cb0;
+            border: 1px solid #bee3f8;
+        }
+
+        .status.success {
+            background: #f0fff4;
+            color: #22543d;
+            border: 1px solid #9ae6b4;
+        }
+
+        .status.error {
+            background: #fed7d7;
+            color: #c53030;
+            border: 1px solid #feb2b2;
+        }
+
+        .status.fallback {
+            background: #fffbeb;
+            color: #d69e2e;
+            border: 1px solid #fbd38d;
+        }
+
+        @media (max-width: 768px) {
+            .results {
+                grid-template-columns: 1fr;
+            }
+            
+            .input-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .input-group label {
+                min-width: auto;
+            }
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .environment-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 12px;
+            z-index: 1000;
+        }
+
+        .environment-indicator.production {
+            background: #22543d;
+        }
+
+        .environment-indicator.development {
+            background: #d69e2e;
+        }
+
+        .environment-indicator.fallback {
+            background: #c53030;
+        }
+    </style>
+</head>
+<body>
+    <div class="environment-indicator" id="envIndicator">🔄 Checking...</div>
+    
+    <div class="container">
+        <div class="header">
+            <h1>🎨 MindCanvas</h1>
+            <p>AI-Powered Text & Abstract Sketch Generator</p>
+        </div>
+
+        <div class="input-section">
+            <div class="input-group">
+                <label for="promptInput">Prompt:</label>
+                <input type="text" id="promptInput" placeholder="Enter your creative prompt here..." value="A robot dreaming of stars.">
+            </div>
+            <button class="generate-btn" id="generateBtn">
+                ✨ Generate MindCanvas
+            </button>
+        </div>
+
+        <div id="statusDiv" class="status" style="display: none;"></div>
+
+        <div class="results" id="results" style="display: none;">
+            <div class="sketch-section">
+                <h3 class="section-title">🎨 Generated Sketch</h3>
+                <canvas id="sketchCanvas" width="400" height="400"></canvas>
+            </div>
+            <div class="text-section">
+                <h3 class="section-title">📝 Generated Text</h3>
+                <div class="generated-text" id="generatedText">
+                    <div class="loading">Generated text will appear here...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration - UPDATE THESE URLS FOR YOUR DEPLOYMENT
+        const CONFIG = {
+            // Replace with your deployed backend URL
+            BACKEND_URL: 'https://your-backend-url.onrender.com', // Update this!
+            
+            // Fallback URLs to try if main backend fails
+            FALLBACK_URLS: [
+                'https://your-backup-backend.railway.app',
+                'https://your-heroku-app.herokuapp.com'
+            ],
+            
+            // Development mode detection
+            isDevelopment: window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        };
+
+        // Use local backend in development
+        if (CONFIG.isDevelopment) {
+            CONFIG.BACKEND_URL = 'http://localhost:5000';
+        }
+
+        // Environment indicator
+        function updateEnvironmentIndicator(mode) {
+            const indicator = document.getElementById('envIndicator');
+            switch (mode) {
+                case 'production':
+                    indicator.textContent = '🚀 Production AI';
+                    indicator.className = 'environment-indicator production';
+                    break;
+                case 'development':
+                    indicator.textContent = '🔧 Development';
+                    indicator.className = 'environment-indicator development';
+                    break;
+                case 'fallback':
+                    indicator.textContent = '⚠️ Fallback Mode';
+                    indicator.className = 'environment-indicator fallback';
+                    break;
+                default:
+                    indicator.textContent = '🔄 Checking...';
+                    indicator.className = 'environment-indicator';
+            }
+        }
+
+        // Simple hash function for deterministic randomness
+        function hashString(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                const char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32-bit integer
+            }
+            return Math.abs(hash);
+        }
+
+        // Abstract sketch generation function (fallback)
+        function generateSketch(prompt, text) {
+            const canvas = document.getElementById('sketchCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Use hashes for deterministic but varied generation
+            const promptHash = hashString(prompt) % 1000;
+            const textHash = hashString(text) % 1000;
+            const colorSeed = (promptHash + textHash) % 256;
+            
+            // Generate background color
+            const bgR = (colorSeed * 1.5) % 255;
+            const bgG = (colorSeed * 0.5) % 255;
+            const bgB = (colorSeed * 2.5) % 255;
+            
+            // Create gradient background
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            gradient.addColorStop(0, `rgba(${bgR}, ${bgG}, ${bgB}, 0.3)`);
+            gradient.addColorStop(1, `rgba(${bgB}, ${bgR}, ${bgG}, 0.3)`);
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Generate abstract shapes
+            for (let i = 0; i < 15; i++) {
+                const x = (i * 0.1 * canvas.width) + (promptHash % 100) * 2;
+                const y = (i * 0.08 * canvas.height) + (textHash % 100) * 2;
+                const size = (i % 5) * 20 + 40;
+                
+                const shapeType = (promptHash + i) % 4;
+                
+                // Dynamic color for shapes
+                const shapeR = (textHash * i * 0.01) % 255;
+                const shapeG = (promptHash * i * 0.01) % 255;
+                const shapeB = (colorSeed * i * 0.01) % 255;
+                
+                ctx.fillStyle = `rgba(${shapeR}, ${shapeG}, ${shapeB}, 0.7)`;
+                ctx.strokeStyle = `rgba(${shapeB}, ${shapeR}, ${shapeG}, 0.9)`;
+                ctx.lineWidth = 2;
+                
+                const finalX = x % (canvas.width - size);
+                const finalY = y % (canvas.height - size);
+                
+                switch (shapeType) {
+                    case 0: // Rectangle
+                        ctx.fillRect(finalX, finalY, size, size * 0.8);
+                        ctx.strokeRect(finalX, finalY, size, size * 0.8);
+                        break;
+                    case 1: // Circle
+                        ctx.beginPath();
+                        ctx.arc(finalX + size/2, finalY + size/2, size * 0.4, 0, Math.PI * 2);
+                        ctx.fill();
+                        ctx.stroke();
+                        break;
+                    case 2: // Triangle
+                        ctx.beginPath();
+                        ctx.moveTo(finalX, finalY + size);
+                        ctx.lineTo(finalX + size, finalY + size);
+                        ctx.lineTo(finalX + size/2, finalY);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.stroke();
+                        break;
+                    case 3: // Line/Curve
+                        ctx.beginPath();
+                        ctx.moveTo(finalX, finalY);
+                        ctx.quadraticCurveTo(finalX + size/2, finalY + size * 1.5, finalX + size, finalY);
+                        ctx.stroke();
+                        break;
+                }
+            }
+        }
+
+        // API call to backend with retry logic
+        async function callBackendAPI(prompt, urls = [CONFIG.BACKEND_URL]) {
+            for (const url of urls) {
+                try {
+                    const response = await fetch(`${url}/generate`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ prompt: prompt }),
+                        timeout: 30000 // 30 second timeout
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const result = await response.json();
+                    updateEnvironmentIndicator('production');
+                    return result;
+                } catch (error) {
+                    console.warn(`Backend ${url} failed:`, error.message);
+                    continue;
+                }
+            }
+            throw new Error('All backend URLs failed');
+        }
+
+        // Fallback simulated text generation
+        function generateTextFallback(prompt) {
+            const templates = [
+                "Once upon a time, {prompt} led to an extraordinary adventure where dreams became reality and imagination knew no bounds.",
+                "In a world where {prompt} was the key to unlocking mysteries, ancient secrets whispered through the cosmic winds.",
+                "The story begins with {prompt}, a catalyst that transformed the ordinary into the extraordinary, weaving magic through every moment.",
+                "Deep within the realm of possibility, {prompt} sparked a journey that would forever change the fabric of existence.",
+                "As the stars aligned, {prompt} became the beacon that guided lost souls through the labyrinth of infinite possibilities."
+            ];
+            
+            const variations = [
+                "Colors danced in harmony, painting emotions across the canvas of time.",
+                "Whispers of forgotten melodies echoed through dimensions unknown.",
+                "The universe breathed with anticipation, waiting for the next chapter to unfold.",
+                "Shadows and light played eternal games, creating stories within stories.",
+                "Time itself seemed to pause, allowing magic to weave its eternal spell."
+            ];
+            
+            const promptHash = hashString(prompt);
+            const selectedTemplate = templates[promptHash % templates.length];
+            const selectedVariation = variations[promptHash % variations.length];
+            
+            return selectedTemplate.replace('{prompt}', prompt) + " " + selectedVariation;
+        }
+
+        // Main generation function
+        async function generateMindCanvas() {
+            const prompt = document.getElementById('promptInput').value.trim();
+            const generateBtn = document.getElementById('generateBtn');
+            const statusDiv = document.getElementById('statusDiv');
+            const results = document.getElementById('results');
+            const generatedText = document.getElementById('generatedText');
+            const canvas = document.getElementById('sketchCanvas');
+            
+            if (!prompt) {
+                alert('Please enter a prompt!');
+                return;
+            }
+            
+            // Show loading state
+            generateBtn.disabled = true;
+            generateBtn.innerHTML = '<span class="spinner"></span> Generating...';
+            statusDiv.style.display = 'block';
+            statusDiv.className = 'status generating';
+            statusDiv.textContent = 'Generating your MindCanvas...';
+            results.style.display = 'grid';
+            generatedText.innerHTML = '<div class="loading">Generating text...</div>';
+            
+            try {
+                // Try to call the backend API first
+                try {
+                    const allUrls = [CONFIG.BACKEND_URL, ...CONFIG.FALLBACK_URLS];
+                    const result = await callBackendAPI(prompt, allUrls);
+                    
+                    if (result.success) {
+                        // Display AI-generated text
+                        generatedText.textContent = result.generated_text;
+                        
+                        // Display AI-generated sketch image
+                        const ctx = canvas.getContext('2d');
+                        const img = new Image();
+                        img.onload = function() {
+                            ctx.clearRect(0, 0, canvas.width, canvas.height);
+                            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        };
+                        img.src = result.sketch_image;
+                        
+                        statusDiv.className = 'status success';
+                        statusDiv.textContent = 'MindCanvas generated successfully using AI!';
+                    } else {
+                        throw new Error(result.error || 'Unknown error from backend');
+                    }
+                } catch (apiError) {
+                    // Fallback to client-side generation
+                    console.warn('Backend API unavailable, using fallback:', apiError.message);
+                    
+                    updateEnvironmentIndicator('fallback');
+                    statusDiv.className = 'status fallback';
+                    statusDiv.textContent = 'Using fallback generation (AI backend unavailable)...';
+                    
+                    // Generate text using fallback
+                    const text = generateTextFallback(prompt);
+                    
+                    // Generate sketch using client-side method
+                    generateSketch(prompt, text);
+                    
+                    // Display results
+                    generatedText.textContent = text;
+                    
+                    statusDiv.className = 'status success';
+                    statusDiv.textContent = 'MindCanvas generated successfully (fallback mode)!';
+                }
+                
+                // Hide status after 3 seconds
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 3000);
+                
+            } catch (error) {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = 'Error generating MindCanvas. Please try again.';
+                console.error('Generation error:', error);
+            } finally {
+                generateBtn.disabled = false;
+                generateBtn.innerHTML = '✨ Generate MindCanvas';
+            }
+        }
+
+        // Check backend health on load
+        async function checkBackendHealth() {
+            try {
+                const response = await fetch(`${CONFIG.BACKEND_URL}/health`, {
+                    method: 'GET',
+                    timeout: 5000
+                });
+                
+                if (response.ok) {
+                    const health = await response.json();
+                    if (health.model_loaded) {
+                        updateEnvironmentIndicator('production');
+                    } else {
+                        updateEnvironmentIndicator('fallback');
+                    }
+                } else {
+                    updateEnvironmentIndicator('fallback');
+                }
+            } catch (error) {
+                updateEnvironmentIndicator('fallback');
+            }
+        }
+
+        // Event listeners
+        document.getElementById('generateBtn').addEventListener('click', generateMindCanvas);
+        document.getElementById('promptInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                generateMindCanvas();
+            }
+        });
+
+        // Initial setup
+        window.addEventListener('load', () => {
+            checkBackendHealth();
+            if (CONFIG.isDevelopment) {
+                updateEnvironmentIndicator('development');
+            }
+        });
+    </script>
+</body>
+</html>
